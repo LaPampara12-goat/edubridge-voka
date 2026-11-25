@@ -1,0 +1,9 @@
+(async()=>{
+  const auth=await EduBridge.initShell();if(!auth)return;const input=document.getElementById("search"),results=document.getElementById("results");let timer;
+  input.addEventListener("input",()=>{clearTimeout(timer);timer=setTimeout(search,250);});
+  async function search(){const q=input.value.trim();if(q.length<2){results.innerHTML='<div class="empty-state">Escribe al menos 2 caracteres para buscar.</div>';return;}if(!db){results.innerHTML='<div class="empty-state">Configura Supabase para buscar estudiantes.</div>';return;}
+    results.innerHTML='<div class="empty-state">Buscando…</div>';const safe=q.replace(/[,%()]/g," ");const {data,error}=await db.from("latest_status").select("student_document,student_name,grade,status,zone,reported_at,latitude,longitude").or(`student_document.ilike.%${safe}%,student_name.ilike.%${safe}%,grade.ilike.%${safe}%`).order("reported_at",{ascending:false}).limit(50);
+    if(error){results.innerHTML='<div class="empty-state">No se pudo consultar el censo. Revisa permisos y conexión.</div>';return;}if(!data?.length){results.innerHTML='<div class="empty-state">No se encontraron estudiantes.</div>';return;}
+    results.innerHTML=data.map(r=>`<article class="result-card"><div><h3>${EduBridge.escape(r.student_name)}</h3><p class="muted small">Documento ${EduBridge.escape(r.student_document)} · ${EduBridge.escape(r.grade)}</p><p class="small muted">${EduBridge.escape(r.zone||"Zona sin definir")} · ${r.reported_at?new Date(r.reported_at).toLocaleString("es-CO"):""}</p></div><span class="status-badge ${EduBridge.statusClass(r.status)}">${EduBridge.escape(EduBridge.label(r.status))}</span></article>`).join("");
+  }
+})();
